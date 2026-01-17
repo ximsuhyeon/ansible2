@@ -7,8 +7,14 @@
 ### 목록 중 연결닫기 하면 다시 윈도우 파워 셸
 ![alt text](image-2.png)
 ## 윈도우즈에서 현재의 프로젝트 폴더를 WSL 의 Linux 폴더로 복제
-
-
+## VSCode 실행, WSL 선택, 폴더 열기
+![alt text](image-3.png)
+## WSL 환경의 Git 재설정 필요
+![alt text](image-4.png)
+```
+git config --global user.name "당신의 이름 또는 닉네임"
+git config --global user.email "github에 등록된 이메일@example.com"
+```
 
 이 레포는 **Ansible 초급자**가 다음까지 “레포 형태로” 실습하면서 익히도록 구성했습니다.
 
