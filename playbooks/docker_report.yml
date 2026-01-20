@@ -50,14 +50,20 @@
 
     # JSON line format → 템플릿에서 from_json으로 표(table) 만들기
     - name: Docker images as JSON lines
-      ansible.builtin.command: bash -lc "docker image ls --format '{{\"{{json .}}\"}}'"
+      ansible.builtin.shell: |
+        docker image ls --format '{{ "{{" }}json .{{ "}}" }}'
+      args:
+        executable: /bin/bash
       register: docker_images
       changed_when: false
       failed_when: false
       when: docker_check.rc == 0
 
     - name: Docker containers as JSON lines
-      ansible.builtin.command: bash -lc "docker ps -a --format '{{\"{{json .}}\"}}'"
+      ansible.builtin.shell: |
+        docker ps -a --format '{{ "{{" }}json .{{ "}}" }}'
+      args:
+        executable: /bin/bash
       register: docker_containers
       changed_when: false
       failed_when: false
