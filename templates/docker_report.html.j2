@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docker Report - {{ inventory_hostname }}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; color: #111; }
+    .muted { color: #666; }
+    .badge { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eee; }
+    .ok { background: #d7f5dd; }
+    .no { background: #ffd9d9; }
+    .card { border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; margin: 14px 0; }
+    h1 { margin: 0 0 6px 0; font-size: 22px; }
+    h2 { margin: 0 0 10px 0; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #fafafa; position: sticky; top: 0; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #0b1020; color: #e8e8e8; padding: 12px; border-radius: 10px; overflow: auto; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .kpi { border: 1px solid #eee; border-radius: 12px; padding: 12px; background: #fff; }
+    .kpi .v { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Docker Report <span class="muted">({{ inventory_hostname }})</span></h1>
+  <div class="muted">Generated: {{ _now }}</div>
+
+  <div class="card">
+    <h2>Environment</h2>
+    <div class="grid">
+      <div class="kpi">
+        <div class="muted">OS</div>
+        <div class="v">{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</div>
+      </div>
+      <div class="kpi">
+        <div class="muted">Python3</div>
+        {% if python3_installed %}
+          <div class="v"><span class="badge ok">OK</span></div>
+        {% else %}
+          <div class="v"><span class="badge no">NOT FOUND</span></div>
+        {% endif %}
+      </div>
+      <div class="kpi">
+        <div class="muted">Docker CLI</div>
+        {% if docker_installed %}
+          <div class="v"><span class="badge ok">OK</span></div>
+        {% else %}
+          <div class="v"><span class="badge no">NOT FOUND</span></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Facts</h2>
+    <table>
+      <tr><th>Hostname</th><td>{{ ansible_facts['hostname'] }}</td></tr>
+      <tr><th>Kernel</th><td>{{ ansible_facts['kernel'] }} {{ ansible_facts['kernel_version'] }}</td></tr>
+      <tr><th>WSL Hint</th><td>{{ ansible_facts['kernel'] }} (WSL은 보통 Microsoft 커널 문자열이 섞일 수 있음)</td></tr>
+      <tr><th>IP</th><td>{{ ansible_facts['default_ipv4']['address'] | default('N/A') }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Docker Context</h2>
+    {% if docker_context_out %}
+      <pre>{{ docker_context_out }}</pre>
+    {% elif docker_context_err %}
+      <pre>{{ docker_context_err }}</pre>
+    {% else %}
+      <div class="muted">No output.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Docker Version</h2>
+    {% if docker_version_out %}
+      <pre>{{ docker_version_out }}</pre>
+    {% elif docker_version_err %}
+      <pre>{{ docker_version_err }}</pre>
+    {% else %}
+      <div class="muted">No output.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Docker Info</h2>
+    {% if docker_info_out %}
+      <pre>{{ docker_info_out }}</pre>
+    {% elif docker_info_err %}
+      <pre>{{ docker_info_err }}</pre>
+    {% else %}
+      <div class="muted">No output.</div>
+    {% endif %}
+  </div>
+
+  {% set images = [] %}
+  {% for line in docker_images_lines %}
+    {% set _ = images.append(line | from_json) %}
+  {% endfor %}
+
+  <div class="card">
+    <h2>Images (docker image ls)</h2>
+    {% if docker_images_err %}
+      <div class="muted">stderr:</div>
+      <pre>{{ docker_images_err }}</pre>
+    {% endif %}
+
+    {% if images | length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>Repository</th>
+            <th>Tag</th>
+            <th>Image ID</th>
+            <th>Created</th>
+            <th>Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for img in images %}
+            <tr>
+              <td>{{ img.Repository | default('') }}</td>
+              <td>{{ img.Tag | default('') }}</td>
+              <td>{{ img.ID | default('') }}</td>
+              <td>{{ img.CreatedSince | default(img.CreatedAt | default('')) }}</td>
+              <td>{{ img.Size | default('') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="muted" style="margin-top:8px;">Total: {{ images|length }}</div>
+    {% else %}
+      <div class="muted">No images or docker command failed.</div>
+    {% endif %}
+  </div>
+
+  {% set containers = [] %}
+  {% for line in docker_containers_lines %}
+    {% set _ = containers.append(line | from_json) %}
+  {% endfor %}
+
+  {% set running = (containers | selectattr('Status','match','^Up') | list) %}
+  {% set stopped = (containers | rejectattr('Status','match','^Up') | list) %}
+
+  <div class="card">
+    <h2>Containers (docker ps -a)</h2>
+    {% if docker_containers_err %}
+      <div class="muted">stderr:</div>
+      <pre>{{ docker_containers_err }}</pre>
+    {% endif %}
+
+    {% if containers | length > 0 %}
+      <div class="grid" style="margin-bottom:10px;">
+        <div class="kpi"><div class="muted">Total</div><div class="v">{{ containers|length }}</div></div>
+        <div class="kpi"><div class="muted">Running</div><div class="v">{{ running|length }}</div></div>
+        <div class="kpi"><div class="muted">Stopped</div><div class="v">{{ stopped|length }}</div></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Image</th>
+            <th>Status</th>
+            <th>Ports</th>
+            <th>ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in containers %}
+            <tr>
+              <td>{{ c.Names | default('') }}</td>
+              <td>{{ c.Image | default('') }}</td>
+              <td>{{ c.Status | default('') }}</td>
+              <td>{{ c.Ports | default('') }}</td>
+              <td>{{ c.ID | default('') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="muted">No containers or docker command failed.</div>
+    {% endif %}
+  </div>
+
+  <div class="muted">Served by: python3 -m http.server 8080 --directory {{ report_dir }}</div>
+</body>
+</html>
