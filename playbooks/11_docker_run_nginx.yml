@@ -1,5 +1,5 @@
 ---
-- name: 11) Run nginx container on Docker hosts
+- name: Run nginx container on Docker hosts
   hosts: docker_hosts
   gather_facts: false
 
@@ -16,4 +16,4 @@
         state: started
         restart_policy: unless-stopped
         ports:
-          - "8080:80"
+          - "8081:80"

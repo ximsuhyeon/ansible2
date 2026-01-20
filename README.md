@@ -444,6 +444,17 @@ aws --version
 ```
 ---
 ```
+sudo apt update
+sudo apt install -y curl unzip
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip -q awscliv2.zip
+sudo ./aws/install --update
+
+aws --version
+```
+---
+```
 kimdy@DESKTOP-CLQV18N:~/ansible-aws-docker-ops-enterprise$ aws
 
 aws: [ERROR]: the following arguments are required: command

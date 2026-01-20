@@ -38,3 +38,6 @@ Desktop.ini
 # --- Local secrets / env ---
 .env
 .venv
+
+*.zip
+/aws
