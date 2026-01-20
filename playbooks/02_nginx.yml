@@ -1,9 +1,17 @@
 ---
-- name: 02) Install nginx and publish simple page (no role)
+- name: Install nginx and publish simple page
   hosts: all
   gather_facts: true
-
+  
   tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - git
+          - htop
+        state: present
+ 
     - name: Install nginx (Debian/Ubuntu)
       ansible.builtin.apt:
         name: nginx

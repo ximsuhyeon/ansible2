@@ -1,0 +1,67 @@
+---
+- name: Check nginx install/running and port 80 usage on WSL Ubuntu
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    # 1) nginx 설치 여부 (dpkg)
+    - name: Check nginx package installed (dpkg)
+      ansible.builtin.shell: |
+        set -o pipefail
+        dpkg -l | awk '$1=="ii" && $2 ~ /^nginx/ {print $2" "$3}'
+      args:
+        executable: /bin/bash
+      register: nginx_dpkg
+      changed_when: false
+      failed_when: false
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Print nginx package info
+      ansible.builtin.debug:
+        msg:
+          - "nginx packages: {{ (nginx_dpkg.stdout_lines | default([])) | join(', ') if (nginx_dpkg.stdout | default('')) != '' else 'NOT INSTALLED' }}"
+
+    # 2) nginx 프로세스 실행 여부 (systemd 없어도 확인 가능)
+    - name: Check nginx process running (ps)
+      ansible.builtin.shell: |
+        pgrep -a nginx || true
+      register: nginx_ps
+      changed_when: false
+      failed_when: false
+
+    - name: Print nginx process
+      ansible.builtin.debug:
+        msg:
+          - "nginx process: {{ nginx_ps.stdout if nginx_ps.stdout != '' else 'NOT RUNNING' }}"
+
+    # 3) 80 포트 리슨 중인지 (ss)
+    - name: Check who listens on TCP 80 (ss)
+      ansible.builtin.shell: |
+        ss -lntp '( sport = :80 )' 2>/dev/null || true
+      register: port80_ss
+      changed_when: false
+      failed_when: false
+
+    - name: Print port 80 listeners
+      ansible.builtin.debug:
+        msg:
+          - "listen :80 =>"
+          - "{{ port80_ss.stdout if port80_ss.stdout != '' else 'NOTHING LISTENING ON :80' }}"
+
+    # 4) HTTP 응답 확인 (curl)
+    - name: Check HTTP response from localhost:80
+      ansible.builtin.uri:
+        url: "http://127.0.0.1/"
+        method: GET
+        return_content: false
+        timeout: 3
+        status_code: [200, 301, 302, 403, 404]
+      register: http_check
+      changed_when: false
+      failed_when: false
+
+    - name: Print HTTP check result
+      ansible.builtin.debug:
+        msg:
+          - "HTTP localhost:80 status: {{ http_check.status | default('NO RESPONSE') }}"
