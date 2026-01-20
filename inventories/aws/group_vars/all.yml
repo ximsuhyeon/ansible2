@@ -1,0 +1,17 @@
+---
+# 공통 변수
+app_user: app
+app_group: app
+
+# Nginx 웹 루트
+web_root: /var/www/html
+
+# Docker
+install_docker: true
+enable_crowdsec_lab: true
+
+# AWS 기본값 (학습용)
+aws_region: ap-northeast-2
+aws_tags:
+  Project: ansible-labs
+  ManagedBy: ansible

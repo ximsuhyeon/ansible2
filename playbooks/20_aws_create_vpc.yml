@@ -1,5 +1,5 @@
 ---
-- name: 20) AWS - Create VPC/Subnet/SG (API from control node)
+- name: AWS - Create VPC/Subnet/SG (API from control node)
   hosts: localhost
   connection: local
   gather_facts: false
